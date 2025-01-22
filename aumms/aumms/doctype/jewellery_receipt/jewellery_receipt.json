@@ -18,6 +18,7 @@
   "board_rate",
   "date",
   "quantity",
+  "total_gold_weight",
   "section_break_vxux",
   "item_details",
   "item_wise_stone_details",
@@ -129,6 +130,13 @@
    "label": "Item Sub Category",
    "options": "Item Sub Category",
    "reqd": 1
+  },
+  {
+   "fieldname": "total_gold_weight",
+   "fieldtype": "Float",
+   "label": "Total Gold Weight",
+   "precision": "2",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
