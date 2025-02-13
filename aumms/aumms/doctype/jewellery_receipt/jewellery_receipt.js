@@ -18,6 +18,10 @@ frappe.ui.form.on("Jewellery Receipt", {
     });
     set_sub_category_filter(frm);
   },
+  onload: function (frm) {
+    frm.fields_dict["item_wise_stone_details"].grid.cannot_add_rows = true;
+    frm.refresh_field("item_wise_stone_details");
+  },
   item_sub_category: function (frm) {
     frm.events.update_item_details_table(frm);
   },
@@ -202,14 +206,26 @@ frappe.ui.form.on("Jewellery Item Receipt", {
   },
   add_stone: function (frm, cdt, cdn) {
     let row = locals[cdt][cdn];
+    if (row.has_stone) {
+    if (!row.stone || !row.stone_uom || !row.stone_weight || !row.rate) {
+        frappe.msgprint(__(
+          'Please ensure all stone details are filled before adding.'));
+        return;
+    }
+
     frm.add_child("item_wise_stone_details", {
-      reference: row.idx,
-      stone: row.stone,
-      uom: row.stone_uom,
-      stone_weight: row.stone_weight,
-      rate: row.rate,
-      amount: row.rate * row.stone_weight,
+        reference: row.idx,
+        stone: row.stone,
+        uom: row.stone_uom,
+        stone_weight: row.stone_weight,
+        rate: row.rate,
+        amount: row.rate * row.stone_weight,
     });
+
+    frm.refresh_field("item_wise_stone_details");
+    } else {
+        frappe.msgprint(__('Has Stone must be checked to add a stone.'));
+    }
 
     if (row.stone_weight_gold_weight_uom)
       row.stone_weight_gold_weight_uom += row.stone_weight;
