@@ -9,6 +9,15 @@ frappe.ui.form.on("Jewellery Receipt", {
     });
   },
   refresh: function (frm) {
+    frm.fields_dict["item_wise_stone_details"].grid.wrapper.on(
+    "click",
+    ".grid-remove-row",
+    function () {
+      setTimeout(() => {
+        update_stone_weight_gold_weight_uom(frm);
+      }, 100);
+    }
+    );
     frm.set_query("stone", "item_details", () => {
       return {
         filters: {
@@ -420,4 +429,22 @@ function set_sub_category_filter(frm) {
       },
     };
   });
+}
+frappe.ui.form.on("Item Wise Stone Details", {
+  item_wise_stone_details_remove: function (frm, cdt, cdn) {
+    update_stone_weight_gold_weight_uom(frm);
+  }
+});
+
+function update_stone_weight_gold_weight_uom(frm) {
+  frm.doc.item_details.forEach((item) => {
+    item.stone_weight_gold_weight_uom = 0;
+  });
+  frm.doc.item_wise_stone_details.forEach((stone_row) => {
+    let parent_row = frm.doc.item_details.find((item) => item.idx === stone_row.reference);
+    if (parent_row) {
+      parent_row.stone_weight_gold_weight_uom += stone_row.stone_weight;
+    }
+  });
+  frm.refresh_field("item_details");
 }
