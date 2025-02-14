@@ -433,6 +433,12 @@ function set_sub_category_filter(frm) {
 frappe.ui.form.on("Item Wise Stone Details", {
   item_wise_stone_details_remove: function (frm, cdt, cdn) {
     update_stone_weight_and_charge(frm);
+  },
+  stone_weight: function (frm, cdt, cdn) {
+  update_stone_weight_and_charge(frm);
+  },
+  rate: function (frm, cdt, cdn) {
+  update_stone_weight_and_charge(frm);
   }
 });
 
