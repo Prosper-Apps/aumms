@@ -18,6 +18,7 @@
   "board_rate",
   "date",
   "quantity",
+  "total_gold_weight",
   "section_break_vxux",
   "item_details",
   "item_wise_stone_details",
@@ -121,8 +122,7 @@
    "fieldname": "item_wise_stone_details",
    "fieldtype": "Table",
    "label": "Item Wise Stone Details",
-   "options": "Item Wise Stone Details",
-   "read_only": 1
+   "options": "Item Wise Stone Details"
   },
   {
    "fieldname": "item_sub_category",
@@ -130,12 +130,19 @@
    "label": "Item Sub Category",
    "options": "Item Sub Category",
    "reqd": 1
+  },
+  {
+   "fieldname": "total_gold_weight",
+   "fieldtype": "Float",
+   "label": "Total Gold Weight",
+   "precision": "2",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-01-20 14:25:31.637164",
+ "modified": "2025-02-13 15:28:43.982739",
  "modified_by": "Administrator",
  "module": "AuMMS",
  "name": "Jewellery Receipt",

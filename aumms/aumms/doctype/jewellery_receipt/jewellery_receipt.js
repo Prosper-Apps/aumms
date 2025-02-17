@@ -9,6 +9,15 @@ frappe.ui.form.on("Jewellery Receipt", {
     });
   },
   refresh: function (frm) {
+    frm.fields_dict["item_wise_stone_details"].grid.wrapper.on(
+    "click",
+    ".grid-remove-row",
+    function () {
+      setTimeout(() => {
+        update_stone_weight_and_charge(frm);
+      }, 100);
+    }
+    );
     frm.set_query("stone", "item_details", () => {
       return {
         filters: {
@@ -17,6 +26,10 @@ frappe.ui.form.on("Jewellery Receipt", {
       };
     });
     set_sub_category_filter(frm);
+  },
+  onload: function (frm) {
+    frm.fields_dict["item_wise_stone_details"].grid.cannot_add_rows = true;
+    frm.refresh_field("item_wise_stone_details");
   },
   item_sub_category: function (frm) {
     frm.events.update_item_details_table(frm);
@@ -107,28 +120,46 @@ frappe.ui.form.on("Jewellery Receipt", {
     if (quantity < cur_items_len) {
       frm.doc.item_details.splice(quantity);
     } else {
-      for (var i = cur_items_len; i < quantity; i++) {
-        let row = frm.add_child("item_details", {
-          item_category: frm.doc.item_category,
-          item_type: frm.doc.item_type,
-          item_group: frm.doc.item_group,
-          purity: frm.doc.purity,
-          board_rate: frm.doc.board_rate,
+      frappe.db
+        .get_value(
+          "Item Sub Category",
+          frm.doc.item_sub_category,
+          "making_charge_in_percentage"
+        )
+        .then((r) => {
+          console.log("here1");
+          console.log(cur_items_len);
+          console.log(quantity);
+          
+          
+          for (var i = cur_items_len; i < quantity; i++) {
+            console.log("loop");
+            
+            frm.add_child("item_details", {
+              item_category: frm.doc.item_category,
+              item_type: frm.doc.item_type,
+              item_group: frm.doc.item_group,
+              purity: frm.doc.purity,
+              board_rate: frm.doc.board_rate,
+              making_chargein_percentage: r.message.making_charge_in_percentage,
+            });
+            frm.refresh_fields()
+          }
         });
-      }
+      
     }
 
     frm.refresh_field("item_details");
   },
 });
 frappe.ui.form.on("Jewellery Item Receipt", {
-  form_render: function (frm, cdt, cdn) {
-    let d = locals[cdt][cdn];
-    if (d.has_stone) {
-      let net_weight = d.gold_weight + d.stone_weight;
-      frappe.model.set_value(cdt, cdn, "net_weight", net_weight);
-    }
-  },
+  // form_render: function (frm, cdt, cdn) {
+  //   let d = locals[cdt][cdn];
+  //   if (d.has_stone) {
+  //     let net_weight = d.gold_weight + d.stone_weight;
+  //     frappe.model.set_value(cdt, cdn, "net_weight", net_weight);
+  //   }
+  // }, kept for future reference
   stone_weight: function (frm, cdt, cdn) {
     let d = locals[cdt][cdn];
     if (d.single_stone) {
@@ -154,7 +185,7 @@ frappe.ui.form.on("Jewellery Item Receipt", {
   },
   gold_weight: function (frm, cdt, cdn) {
     let d = locals[cdt][cdn];
-    if (!d.has_stone) {
+    if (!d.has_stone || !d.stone_charge) {
       let net_weight = d.gold_weight;
       frappe.model.set_value(cdt, cdn, "net_weight", net_weight);
       let amount_without_making_charge = d.gold_weight * frm.doc.board_rate;
@@ -170,6 +201,7 @@ frappe.ui.form.on("Jewellery Item Receipt", {
         d.amount_without_making_charge * (d.making_chargein_percentage / 100);
       frappe.model.set_value(cdt, cdn, "making_charge", making_charge);
     }
+    frm.call("calculate_item_details")
   },
   making_chargein_percentage: function (frm, cdt, cdn) {
     let d = locals[cdt][cdn];
@@ -202,14 +234,26 @@ frappe.ui.form.on("Jewellery Item Receipt", {
   },
   add_stone: function (frm, cdt, cdn) {
     let row = locals[cdt][cdn];
+    if (row.has_stone) {
+    if (!row.stone || !row.stone_uom || !row.stone_weight || !row.rate) {
+        frappe.msgprint(__(
+          'Please ensure all stone details are filled before adding.'));
+        return;
+    }
+
     frm.add_child("item_wise_stone_details", {
-      reference: row.idx,
-      stone: row.stone,
-      uom: row.stone_uom,
-      stone_weight: row.stone_weight,
-      rate: row.rate,
-      amount: row.rate * row.stone_weight,
+        reference: row.idx,
+        stone: row.stone,
+        uom: row.stone_uom,
+        stone_weight: row.stone_weight,
+        rate: row.rate,
+        amount: row.rate * row.stone_weight,
     });
+
+    frm.refresh_field("item_wise_stone_details");
+    } else {
+        frappe.msgprint(__('Has Stone must be checked to add a stone.'));
+    }
 
     if (row.stone_weight_gold_weight_uom)
       row.stone_weight_gold_weight_uom += row.stone_weight;
@@ -219,13 +263,17 @@ frappe.ui.form.on("Jewellery Item Receipt", {
     else row.stone_charge = row.rate * row.stone_weight;
 
     row.stone = "";
-    row.stone_uom = "";
+    row.stone_uom = "Gram";
     row.stone_weight = "";
     row.rate = "";
 
     frm.refresh_field("item_wise_stone_details");
     frm.refresh_field("item_details");
+    frm.call("calculate_item_details")
   },
+  board_rate: function(frm) {
+    frm.call("calculate_item_details")
+  }
 });
 
 let create_multi_stone = function (frm, cdt, cdn) {
@@ -404,4 +452,30 @@ function set_sub_category_filter(frm) {
       },
     };
   });
+}
+frappe.ui.form.on("Item Wise Stone Details", {
+  item_wise_stone_details_remove: function (frm, cdt, cdn) {
+    update_stone_weight_and_charge(frm);
+  },
+  stone_weight: function (frm, cdt, cdn) {
+  update_stone_weight_and_charge(frm);
+  },
+  rate: function (frm, cdt, cdn) {
+  update_stone_weight_and_charge(frm);
+  }
+});
+
+function update_stone_weight_and_charge(frm) {
+  frm.doc.item_details.forEach((item) => {
+    item.stone_weight_gold_weight_uom = 0;
+    item.stone_charge = 0;
+  });
+  frm.doc.item_wise_stone_details.forEach((stone_row) => {
+    let parent_row = frm.doc.item_details.find((item) => item.idx === stone_row.reference);
+    if (parent_row) {
+      parent_row.stone_weight_gold_weight_uom += stone_row.stone_weight;
+      parent_row.stone_charge += stone_row.rate * stone_row.stone_weight;
+    }
+  });
+  frm.refresh_field("item_details");
 }
